@@ -1,0 +1,10 @@
+{
+  "id": "maker",
+  "title": "ST 메이커",
+  "version": "0.1.0",
+  "role": "service",
+  "description": "제작 도구 (D-052): 주문을 적으면 모자란 칸이 표로 보이고, 채우고, 후보에서 골라 게임에 넣는다. 화면 다섯 — 일감 표 · 고르기 · 줄거리 표 · 주문서 · 돌리기. 쓰는 곳은 Cards/ 아래뿐, 속은 Tools/Pipeline 의 명령.",
+  "requires": ["jobs"],
+  "main": "index.js",
+  "styles": ["style.css"]
+}

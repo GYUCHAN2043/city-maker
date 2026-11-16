@@ -1,0 +1,45 @@
+/* 따로 여는 ST 메이커의 바탕 (index.html 에서만). 런처 안에서는 런처의 theme.css 가 같은 이름의 값과 부품을 준다 — 여기는 그 가운데 화면이 쓰는 것만 옮긴 것. */
+:root {
+  --bg-canvas: #1f1f1f; --bg-chrome: #181818; --bg-surface: #252526; --bg-hover: #2a2d2e; --bg-active: #37373d;
+  --border-default: #2b2b2b; --border-strong: #3c3c3c;
+  --fg-default: #cccccc; --fg-muted: #8b8b8b; --fg-faint: #5a5a5a; --fg-on-accent: #ffffff;
+  --accent: #4c8bf5; --accent-muted: #264f78; --success: #4ec98a; --warning: #e5b454; --danger: #f14c4c; --info: #75beff;
+  --font-ui: "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font-mono: Consolas, "Cascadia Mono", "D2Coding", ui-monospace, monospace;
+  --text-sm: 11px; --text-md: 12px; --text-lg: 13px;
+}
+* { box-sizing: border-box; }
+html, body.mk-page { height: 100%; margin: 0; }
+body.mk-page { background: var(--bg-canvas); color: var(--fg-default); font: var(--text-lg)/1.4 var(--font-ui); -webkit-text-size-adjust: 100%; }
+#app { height: 100dvh; }
+button, input, select, textarea { font: inherit; color: inherit; }
+kbd { font: var(--text-sm) var(--font-ui); padding: 0 4px; border: 1px solid var(--border-strong); border-radius: 3px; background: var(--bg-surface); }
+.a-btn { white-space: nowrap; padding: 2px 10px; background: var(--bg-active); border: 1px solid var(--border-strong); color: var(--fg-default); cursor: default; user-select: none; }
+.a-btn:hover { background: #45454d; }
+.a-btn.a-primary { background: var(--accent); border-color: var(--accent); color: var(--fg-on-accent); }
+.a-btn.a-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.a-btn:disabled { opacity: .5; }
+.a-badge { white-space: nowrap; display: inline-block; padding: 0 6px; font-size: var(--text-sm); line-height: 16px; border-radius: 2px; background: var(--bg-active); color: var(--fg-muted); }
+.a-badge.is-success { background: rgba(78,201,138,.15); color: var(--success); }
+.a-badge.is-warning { background: rgba(229,180,84,.15); color: var(--warning); }
+.a-badge.is-danger  { background: rgba(241,76,76,.15); color: var(--danger); }
+.a-badge.is-info    { background: rgba(117,190,255,.15); color: var(--info); }
+.a-table { width: 100%; border-collapse: collapse; }
+.a-table th { text-align: left; font-weight: 600; color: var(--fg-muted); font-size: var(--text-sm); padding: 4px 8px; border-bottom: 1px solid var(--border-strong); }
+.a-table td { padding: 4px 8px; border-bottom: 1px solid var(--border-default); vertical-align: top; }
+.a-input, .a-select { background: var(--bg-surface); border: 1px solid var(--border-strong); padding: 2px 6px; outline: 0; color: var(--fg-default); }
+.a-input:focus, .a-select:focus { border-color: var(--accent); }
+.a-seg { display: inline-flex; border: 1px solid var(--border-strong); }
+.a-seg button { background: var(--bg-surface); border: 0; padding: 1px 9px; color: var(--fg-muted); cursor: default; }
+.a-seg button + button { border-left: 1px solid var(--border-strong); }
+.a-seg button.is-on { background: var(--accent-muted); color: #fff; }
+.a-mono { font-family: var(--font-mono); font-size: var(--text-sm); }
+.a-faint { color: var(--fg-faint); }
+
+/* 들어가기 */
+.mk-login { max-width: 420px; margin: 0 auto; padding: 12vh 20px 20px; display: grid; gap: 14px; }
+.mk-login h1 { margin: 0; font-size: 22px; font-weight: 600; }
+.mk-login p { margin: 0; color: var(--fg-muted); }
+.mk-login label { display: grid; gap: 5px; color: var(--fg-muted); font-size: 12px; }
+.mk-login .a-input { font-size: 16px; padding: 9px 10px; }
+.mk-login .a-btn { font-size: 15px; padding: 10px; }
