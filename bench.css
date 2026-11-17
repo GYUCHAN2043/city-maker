@@ -125,7 +125,7 @@
 /* 대화 카드를 bubbles.js 로 그릴 때 (방금 만든 소설 · 새 판) — 작업대의 색으로 */
 .mkb .mk-card-head { display:flex; gap:6px; align-items:baseline } .mkb .mk-card-title { font-weight:600 } .mkb .a-faint { color:var(--mute) } .mkb .a-mono { font-family:var(--mono); font-size:11px }
 .mkb .mk-bubs { display:flex; flex-direction:column; gap:6px } .mkb .mk-bub { display:grid; gap:1px; max-width:88% } .mkb .mk-bub.is-r { justify-self:end; align-self:flex-end } .mkb .mk-bub.is-all, .mkb .mk-bub.is-choice { align-self:center }
-.mkb .mk-who { font-size:11px; color:var(--mute) } .mkb .mk-say { border-radius:12px; padding:7px 11px; background:var(--soft) } .mkb .mk-bub.is-r .mk-say { background:var(--teal-bg) } .mkb .mk-bub.is-choice .mk-say { background:var(--panel); border:1px solid var(--teal) }
+.mkb .mk-who { font-size:11px; color:var(--mute) } .mkb .mk-say { border-radius:12px; padding:7px 11px; background:var(--soft); color:var(--ink); font-size:14px } .mkb .mk-bub.is-r .mk-say { background:var(--teal-bg) } .mkb .mk-bub.is-choice .mk-say { background:var(--panel); border:1px solid var(--teal) }
 .mkb .mk-card-tags { display:flex; gap:4px; flex-wrap:wrap } .mkb .mk-chip { font-size:11px; border:1px solid var(--line); border-radius:4px; padding:0 5px }
 /* 시뮬레이션 */
 .mkb .simbox { border:2px solid var(--brass); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:8px; background:var(--bg) }

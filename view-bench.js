@@ -319,12 +319,12 @@ function createBench(M) {
       if (st === 'brief') html += `<div class="box"><b>brief</b><div>${esc(s.brief ?? one?.brief ?? s.title)}</div><div class="row"><button class="btn pri" data-x="toNovel">소설로 만들기</button></div></div>`;
       else if (one === undefined) { oneOf(s.id); html += '<div class="empty">읽는 중…</div>'; }
       else if (one?.beats?.length) html += dialogHtml(one);
-      else if (s.fields) html += `<div class="cardv">${cardHtml({ id: s.id, fields: s.fields, order: Object.keys(s.fields), shape: s.shape })}</div>`;
+      else if (s.fields) html += `<div class="cardv">${cardHtml({ id: s.id, fields: s.fields, order: Object.keys(s.fields), shape: s.shape }, { compact: true })}</div>`;
       else html += '<div class="empty">이 ST의 본문이 색인에 없습니다.</div>';
       if (one?.beats?.length) html += S.sim?.id === s.id ? simHtml() : '<div class="row"><button class="btn pri" data-sim="start">▶ 시뮬레이션 — 처음부터 돌려 보기</button><button class="btn" disabled title="D-055 의 조사 뒤">직전 상태로 들어가기</button></div>';
       if (s.f.length || s.t.length) html += `<div class="meta">쓰는 조건: ${[...s.f, ...s.t].map((c) => `<span class="chip">${esc(condText([c]))}</span>`).join('')}</div>`;
       const rd = S.redo[s.id];
-      if (rd?.fields) html += `<div class="box"><b>새 판 — 이전 판과 나란히</b><div class="vs"><div><div class="s">이전 판</div>${one?.beats ? dialogHtml(one) : s.fields ? cardHtml({ id: s.id, fields: s.fields, order: Object.keys(s.fields) }) : ''}</div><div><div class="s">새 판</div>${cardHtml({ id: s.id, fields: rd.fields, order: Object.keys(rd.fields) })}</div></div>
+      if (rd?.fields) html += `<div class="box"><b>새 판 — 이전 판과 나란히</b><div class="vs"><div><div class="s">이전 판</div>${one?.beats ? dialogHtml(one) : s.fields ? cardHtml({ id: s.id, fields: s.fields, order: Object.keys(s.fields), shape: s.shape ?? shapeOf(catOf(s.cat) ?? { id: s.cat }) }) : ''}</div><div><div class="s">새 판</div>${cardHtml({ id: s.id, fields: rd.fields, order: Object.keys(rd.fields), shape: s.shape ?? shapeOf(catOf(s.cat) ?? { id: s.cat }) })}</div></div>
         <div class="row"><button class="btn pri" data-x="takeRedo">새 판으로</button><button class="btn" data-x="dropRedo">이전 판 그대로</button></div></div>`;
       html += `<div class="box"><b>고쳐 달라고 하기</b><textarea data-q="fb" rows="2" placeholder="예: 대꾸가 밋밋해. 손님이 더 능청스럽게.">${esc(rd?.note ?? '')}</textarea><div class="row"><button class="btn" data-x="redo" ${rd?.busy ? 'disabled' : ''}>${rd?.busy ? '만드는 중…' : '다시 만들기'}</button>
         ${['draft', 'checked', 'new'].includes(st) ? '<button class="btn pri" data-x="apply">적용 (게임에 넣기)</button><button class="btn" data-x="drop">버리기</button>' : ''}</div></div>`;
