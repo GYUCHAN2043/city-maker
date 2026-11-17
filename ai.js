@@ -128,7 +128,7 @@ export function createAi({ getPrompts, onCost, fetchImpl }) {
     async suggest(kind, text, library, target) {
       if (!aiKey.has()) return { matches: [], name: String(text ?? '').trim() };
       const lines = Array.isArray(library) ? library.map((x) => (typeof x === 'string' ? x : [x.id, x.name, x.about ?? ''].join(' | '))).join('\n') : library;
-      const { P, system, user } = await task('suggest', null, null, { kind, text, library: lines, target });
+      const { P, system, user } = await task('suggest', null, null, { kind, text, library: lines, target: target ?? '(none)' });
       const r = await call(P, system, user);
       return { matches: r.out.matches ?? [], name: r.out.new?.name ?? r.out.new ?? String(text).trim(), usd: r.usd };
     },

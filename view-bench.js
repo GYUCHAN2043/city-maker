@@ -246,7 +246,7 @@ function createBench(M) {
     const rows = all.filter((r) => !S.stFilter || r.g === S.stFilter);
     const nOf = (g) => all.filter((r) => r.g === g).length;
     const sel = [...S.sel].map((id) => sts().find((x) => x.id === id)).filter((x) => x && x.cat === S.cat);
-    const selB = sel.filter((x) => effStatus(x) === 'brief'), selN = sel.filter((x) => STAGE[effStatus(x)] === 'novel');
+    const selB = sel.filter((x) => effStatus(x) === 'brief'), selN = sel.filter((x) => STAGE[effStatus(x)] === 'novel' && !x.warn?.length);
     let html = `<div class="stf seg sm" role="group" aria-label="상태">${[['', `전부 ${all.length}`], ...Object.entries(STAGEKO).map(([g, ko]) => [g, `${ko} ${nOf(g)}`])].map(([g, t]) => `<button data-stf="${g}" class="${S.stFilter === g ? 'on' : ''}">${esc(t)}</button>`).join('')}</div>`;
     if (selB.length || selN.length) html += `<div class="selbar">${selB.length ? `<button class="btn sm pri" data-x="selNovels" ${S.busy ? 'disabled' : ''}>${S.busy === 'novels' ? '만드는 중…' : `고른 brief ${selB.length}개 소설 만들기`}</button>` : ''}${selN.length ? `<button class="btn sm pri" data-x="selPick" ${S.busy ? 'disabled' : ''}>고른 소설 ${selN.length}개 ST 로 만들기</button>` : ''}<button class="btn sm" data-x="selClear">고르기 풀기</button></div>`;
     html += rows.map(({ s, f, g }) => { const st = effStatus(s), can = g === 'brief' || g === 'novel';
@@ -333,6 +333,7 @@ function createBench(M) {
     return r.data;
   }
 
+  const applyBtns = (s) => `<button class="btn pri" data-x="apply" ${s.warn?.length ? 'disabled title="가벼운 검사에 걸림"' : ''}>ST 로 만들기</button><button class="btn" data-x="drop">버리기</button>`;
   function drawDetail() {
     const box = R('detail'); let html = '';
     const s = S.st && sts().find((x) => x.id === S.st);
@@ -360,8 +361,8 @@ function createBench(M) {
           ${rd.warn?.length ? `<div class="s warn">가벼운 검사: ${rd.warn.map(esc).join(' · ')}</div>` : ''}
           <div class="row"><button class="btn pri" data-x="takeRedo">${keep ? '새 판으로' : '새 카드로 저장'}</button><button class="btn" data-x="dropRedo">이전 판 그대로</button></div>${keep ? '' : '<div class="s">게임에 있는 것 · 손으로 쓴 것은 바꾸지 않는다 — 새 id 의 소설로 저장한다.</div>'}</div>`;
         html += C ? `<div class="box"><b>고쳐 달라고 하기</b><textarea data-q="fb" rows="2" placeholder="예: 대꾸가 밋밋해. 손님이 더 능청스럽게.">${esc(rd?.note ?? '')}</textarea><div class="row"><button class="btn" data-x="redo" ${rd?.busy ? 'disabled' : ''}>${rd?.busy ? '만드는 중…' : '다시 만들기'}</button>
-          ${g === 'novel' ? '<button class="btn pri" data-x="apply">ST 로 만들기</button><button class="btn" data-x="drop">버리기</button>' : ''}</div></div>`
-          : (g === 'novel' ? '<div class="row"><button class="btn pri" data-x="apply">ST 로 만들기</button><button class="btn" data-x="drop">버리기</button></div>' : '');
+          ${g === 'novel' ? applyBtns(s) : ''}</div></div>${g === 'novel' && s.warn?.length ? '<div class="s">가벼운 검사에 걸린 소설은 ST 로 만들지 않는다 — 저장소의 검사가 받지 않는다. 다시 만들기로 고치거나 버리기.</div>' : ''}`
+          : (g === 'novel' ? `<div class="row">${applyBtns(s)}</div>` : '');
       }
     } else if (S.cat) {
       const c = catOf(S.cat) ?? { id: S.cat, name: S.cat }, ps = patsOf(S.cat), lay = layerText(c);
@@ -385,10 +386,10 @@ function createBench(M) {
   function makeHtml(c) {
     const C = S.lib.prompts?.categories?.[c.id];
     if (!C) return `<div class="box"><b>이 카테고리에 ST 더 만들기</b><div class="s">요청문 표(prompts.json)에 이 카테고리가 없습니다 — 손으로 쓰는 ST 입니다. 만들기는 요청문 표에 있는 카테고리만.</div></div>`;
-    const lv = S.lib.prompts?.levels ?? {}, levels = Object.keys(lv).filter((k) => String(lv[k] ?? '').trim() && (!C.levels?.length || C.levels.includes(k)));
+    const levels = levelsOf(c.id), cur = levelOf(c.id);
     return `<div class="box"><b>이 카테고리에 ST 더 만들기</b><input data-q="topic" placeholder="주제 — 예: 집안 걱정, 빚, 몸이 아픈 이야기" value="${esc(S.topic ?? '')}">
       <div class="row"><label>개수 <input data-q="cnt" class="num" type="number" min="1" max="10" value="${S.cnt ?? 5}"></label>
-      <label>수위 <select data-q="level">${levels.map((l) => `<option ${l === (S.level ?? levels[0]) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+      <label>수위 <select data-q="level">${levels.map((l) => `<option ${l === cur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
       <button class="btn pri" data-x="briefs" ${S.busy || !levels.length ? 'disabled' : ''}>${S.busy === 'briefs' ? '만드는 중…' : 'brief 만들기'}</button></div>
       <div class="s">지금 대상의 조건을 달고 태어난다: ${esc(targetText(S.T, (id) => info(id).name, (r) => ROLES[r] ?? r))} · ${aiKey.has() ? '그록을 바로 부른다 — 만든 brief 는 바로 저장되어 ST 칸에 brief 로' : '그록 열쇠가 없으면 만들 수 없다 (위 줄에 넣거나 PC 에서 채우기)'}</div>
       ${levels.length ? '' : '<div class="s bad">이 카테고리의 수위 가운데 요청문 표에 풀이가 있는 것이 없습니다.</div>'}</div>`;
@@ -453,7 +454,11 @@ function createBench(M) {
   const ownerOf = (cid) => S.lib.prompts?.categories?.[cid]?.owner || catOf(cid)?.owner || S.owner;
   const isWord = (id) => !!info(id).word;
   // 한 장의 대상: 화면에서 만든 것은 그때의 대상 · 색인의 것은 그 ST 의 조건 (낱말은 prev)
-  const tOf = (s) => ({ f: { role: s.from ?? 'guest', c: [...(s.f ?? []), ...(s.prev ?? []).map((id) => ({ id }))] }, t: { role: s.to ?? 'staff', c: s.t ?? [] } });
+  // 수위: 그 카테고리의 levels 가운데 요청문 표에 풀이가 있는 것 · 고른 것이 그 안에 없으면 첫 것 (보이는 것과 보내는 것이 같게)
+  const levelsOf = (cid) => { const lv = S.lib.prompts?.levels ?? {}, C = S.lib.prompts?.categories?.[cid] ?? {}; return Object.keys(lv).filter((k) => String(lv[k] ?? '').trim() && (!C.levels?.length || C.levels.includes(k))); };
+  const levelOf = (cid) => { const ls2 = levelsOf(cid); return ls2.includes(S.level) ? S.level : ls2[0] ?? null; };
+  // prev 의 낱말이 이미 f · t 에 있으면 다시 넣지 않는다
+  const tOf = (s) => { const has = new Set([...(s.f ?? []), ...(s.t ?? [])].map(idOf)); return { f: { role: s.from ?? 'guest', c: [...(s.f ?? []), ...(s.prev ?? []).filter((id) => !has.has(id)).map((id) => ({ id }))] }, t: { role: s.to ?? 'staff', c: s.t ?? [] } }; };
   const lineOf = (T) => targetLine(S.lib.prompts, T, info);
   const nowT = () => ({ from: S.T.f.role, to: S.T.t.role, f: S.T.f.c.filter((c) => !isWord(c.id)).map((c) => ({ ...c })), t: S.T.t.c.filter((c) => !isWord(c.id)).map((c) => ({ ...c })),
     prev: [...S.T.f.c, ...S.T.t.c].filter((c) => isWord(c.id)).map((c) => c.id) });
@@ -469,13 +474,15 @@ function createBench(M) {
   const noKey = () => { if (aiKey.has()) return false; S.msg = NOKEY; S.raw = ''; drawDetail(); return true; };
   const fail = (e) => { S.msg = e.message; S.raw = e.raw ?? ''; };
   const money = (u) => (u ? ` · $${u.toFixed(4)}` : '');
+  const saved = () => (backend.kind === 'fixtures' ? '보여 줍니다 (가짜 응답 — 저장하지 않음)' : '저장했습니다');
   // 화면의 가벼운 검사 (4-2): 틀의 칸 이름 · 꼭 있어야 할 칸 · 한 줄 line_max 자 — 걸리면 표시만 하고 저장은 그대로 (저장소의 검사가 정한다)
   function lightCheck(cat, fields) {
     const P = S.lib.prompts ?? {}, C = P.categories?.[cat] ?? {}, L = P.limits ?? {}, out = [];
     const known = C.fields ?? [], max = L.line_max ?? 40, notLine = new Set([...(L.not_lines ?? ['title']), 'brief']);
     for (const [k, v] of Object.entries(fields ?? {})) {
-      if (known.length && !known.includes(k) && k !== 'brief') out.push(`틀 ${C.shape ?? ''} 에 없는 칸: ${k}`);
-      if (typeof v === 'string' && !notLine.has(k) && v.length > max) out.push(`${k} 한 줄이 ${v.length}자 (${max}자까지)`);
+      if (known.length && !known.includes(k) && k !== 'brief' && !(k === 'act' && (C.acts ?? []).includes(v))) out.push(`틀 ${C.shape ?? ''} 에 없는 칸: ${k}`);
+      const len = typeof v === 'string' ? v.replace(/\{[a-z0-9_]+:([^}]*)\}/g, '$1').replace(/\{\/?[a-z0-9_]*\}/g, '').length : 0;      // 연출 꼬리표는 빼고 잰다 (bake 와 같게)
+      if (typeof v === 'string' && !notLine.has(k) && len > max) out.push(`${k} 한 줄이 ${len}자 (${max}자까지)`);
     }
     for (const k of C.required ?? []) if (!String(fields?.[k] ?? '').trim()) out.push(`꼭 있어야 할 칸이 비었음: ${k}`);
     return out;
@@ -483,16 +490,18 @@ function createBench(M) {
   async function doBriefs() {
     if (noKey()) return;
     const n = Math.max(1, Math.min(10, +S.cnt || 5)), c = curCat(), C = S.lib.prompts?.categories?.[c.id] ?? {};
-    const lv = S.lib.prompts?.levels ?? {}, level = S.level ?? Object.keys(lv).find((k) => String(lv[k] ?? '').trim() && (!C.levels?.length || C.levels.includes(k))) ?? 'general';
+    const level = levelOf(c.id);
+    if (!level) { S.msg = '이 카테고리의 수위 가운데 요청문 표에 풀이가 있는 것이 없습니다.'; S.raw = ''; return drawDetail(); }
     const batch = `w${Date.now().toString(36)}`, T = nowT();
     S.busy = 'briefs'; S.msg = ''; S.raw = ''; drawDetail();
     try {
       const r = await ai.briefs({ category: c.id, target: lineOf(S.T), topic: S.topic ?? '', n, level, used: usedIds() });
       const made = r.items.map((x) => ({ id: x.id, title: x.brief, brief: x.brief, cat: c.id, status: 'brief', level, src: 'card', owner: ownerOf(c.id), ...T, model: r.model, batch, fresh: true }));
-      await backend.queue({ cards: made.map((x) => qCard(x, 'brief', { brief: x.brief }, r.model)) }, `brief ${made.length} ${c.id}`);
-      made.reverse().forEach(putMade);
+      [...made].reverse().forEach(putMade);                  // 돌아온 것은 먼저 화면에 (저장이 막혀도 잃지 않게)
       S.stFilter = S.stFilter === 'brief' || !S.stFilter ? S.stFilter : '';
-      S.msg = `brief ${made.length}개를 만들어 저장했습니다${money(r.usd)} — ST 칸에서 골라 "소설 만들기".`;
+      try { await backend.queue({ cards: made.map((x) => qCard(x, 'brief', { brief: x.brief }, r.model)) }, `brief ${made.length} ${c.id}`); }
+      catch (e) { S.msg = `brief ${made.length}개를 만들었지만 저장하지 못했습니다${money(r.usd)} — ${e.message}`; S.busy = null; return draw(); }
+      S.msg = `brief ${made.length}개를 만들어 ${saved()}${money(r.usd)} — ST 칸에서 골라 "소설 만들기".`;
     } catch (e) { fail(e); }
     S.busy = null; draw();
   }
@@ -543,7 +552,11 @@ function createBench(M) {
     const P = S.lib.prompts ?? {}, pre = (P.categories?.[s.cat]?.prefix || s.id.split('_')[0] || 'card').replace(/[^a-z0-9_]/g, '_');
     let id = s.id; if (!keep) { const used = usedIds(); let k = 1; do { id = `${pre}_${Date.now().toString(36)}${k++}`; } while (used.has(id)); }
     const x = { ...s, id, status: 'draft', title: rd.fields.title || s.title, fields: { ...rd.fields, ...(s.brief ? { brief: s.brief } : {}) }, shape: shapeOf(catOf(s.cat) ?? { id: s.cat }), warn: rd.warn, model: rd.model, batch: s.batch || `w${Date.now().toString(36)}`, src: 'card', fresh: true, prev: s.prev ?? [] };
-    await backend.queue({ cards: [qCard(x, 'draft', x.fields, rd.model)] }, `새 판 ${id}`);
+    const one = S.one[s.id], br = s.brief ?? s.fields?.brief ?? one?.brief;
+    if (br) x.fields.brief = br;
+    // 색인의 카드(이 화면에서 만들지 않은 것)를 같은 id 로: redo — 저장소가 그 카드의 act · prev · 수위 · 주인을 그대로 둔다
+    if (keep && !S.made.includes(s)) await backend.queue({ redo: [{ id, fields: x.fields, model: rd.model ?? '' }] }, `새 판 ${id}`);
+    else await backend.queue({ cards: [qCard(x, 'draft', x.fields, rd.model)] }, `새 판 ${id}`);
     putMade(x); S.redo[s.id] = null; S.st = id;
     S.msg = keep ? '새 판을 저장했습니다 — 이전 판은 versions 에 남는다.' : `새 카드 ${id} 로 저장했습니다 (원래 것은 그대로).`;
   }
@@ -606,12 +619,12 @@ function createBench(M) {
       case 'briefs': return doBriefs();
       case 'selNovels': return doNovels([...S.sel]);
       case 'toNovel': return doNovels([S.st]);
-      case 'selPick': await setTo([...S.sel].filter((id) => { const x = sts().find((y) => y.id === id); return x && STAGE[effStatus(x)] === 'novel'; }), 'picked'); break;
+      case 'selPick': await setTo([...S.sel].filter((id) => { const x = sts().find((y) => y.id === id); return x && STAGE[effStatus(x)] === 'novel' && !x.warn?.length; }), 'picked'); break;
       case 'selClear': S.sel.clear(); break;
       case 'redo': return doRedo();
       case 'takeRedo': await takeRedo(); break;
       case 'dropRedo': S.redo[S.st] = null; break;
-      case 'apply': await setTo([S.st], 'picked'); break;
+      case 'apply': { const x = sts().find((y) => y.id === S.st); if (x?.warn?.length) { S.msg = '가벼운 검사에 걸린 소설은 ST 로 만들지 않습니다 — 다시 만들기로 고치세요.'; break; } await setTo([S.st], 'picked'); break; }
       case 'drop': await setTo([S.st], 'dropped'); break;
       case 'keySet': { const v = el.querySelector('[data-q="key"]').value; if (v.trim()) { aiKey.set(v); await pickModel(); } break; }
       case 'keyClear': aiKey.clear(); S.models = []; break;
