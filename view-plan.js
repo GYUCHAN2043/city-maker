@@ -16,7 +16,7 @@ function model(M) {
   const rows = new Map();
   for (const c of daily) {
     const k = rowKey(c);
-    if (!rows.has(k)) { const o = M.store.orderOf(c.owner, c.category); rows.set(k, { key: k, owner: c.owner, category: c.category, who: o?.who || c.who || '', order: !!o || (c.ordered && !!c.brief), brief: o?.brief ?? c.brief ?? '', cells: new Map() }); }
+    if (!rows.has(k)) { const o = M.store.orderOf(c.owner, c.category); rows.set(k, { key: k, owner: c.owner, category: c.category, name: o?.name ?? c.name ?? '', who: o?.who || c.who || '', order: !!o || (c.ordered && !!c.brief), brief: o?.brief ?? c.brief ?? '', cells: new Map() }); }
     rows.get(k).cells.set(colKey(c), c);
   }
   const groups = new Map();
@@ -50,18 +50,19 @@ export const planView = {
     const missCells = cells.filter((c) => c.missing).length, missCards = cells.reduce((n, c) => n + c.missing, 0), drafts = cells.reduce((n, c) => n + c.waiting, 0);
     const canGen = S.caps.fill && !S.busy, nFill = cells.filter(M.store.fillable).length;
     const top = `<div class="mk-top">
-        <div class="mk-stats"><span><b>${missCells}</b> 모자란 칸</span><span><b>${missCards}</b> 모자란 장</span><span class="${drafts ? 'is-hot' : ''}"><b>${drafts}</b> 고르기를 기다리는 후보</span></div>
+        <div class="mk-stats"><span><b>${missCells}</b> 칸이 모자라요</span><span><b>${missCards}</b>장이 모자라요</span><span class="${drafts ? 'is-hot' : ''}"><b>${drafts}</b> 기다리는 카드</span></div>
         <span class="mk-grow"></span>
         ${S.caps.fill ? `<button class="a-btn a-primary" data-act="fill-all" ${canGen && nFill ? '' : 'disabled'} title="주문이 있는 모자란 칸을 전부 채운다 (그록 API · 돈이 든다)">모자란 칸 채우기 — 전부</button>
         ${M.narrow ? '' : `<button class="a-btn" data-act="fill-sel" ${canGen && sel.size ? '' : 'disabled'}>고른 줄만 (${sel.size})</button>`}` : ''}
         ${drafts ? '<button class="a-btn" data-act="pick-next">고르러 가기</button>' : ''}
       </div>
-      ${problems.length || ghosts.length ? `<div class="mk-problems">${ghosts.map((g) => `<div class="is-bad">없는 카테고리에 주문이 있음: <span class="a-mono">${esc(g.cat)}</span> <span class="a-faint">(${esc(g.owner)})</span></div>`).join('')}${problems.map((p) => `<div>${esc(p)}</div>`).join('')}</div>` : ''}`;
+      ${ghosts.length ? `<div class="mk-problems">${ghosts.map((g) => `<div class="is-bad">없는 카테고리에 주문이 있음: <span class="a-mono">${esc(g.cat)}</span> <span class="a-faint">(${esc(g.owner)})</span></div>`).join('')}</div>` : ''}
+      ${problems.length ? `<details class="mk-fold"><summary>문제 ${problems.length}</summary><div class="mk-problems">${problems.map((p) => `<div>${esc(p)}</div>`).join('')}</div></details>` : ''}`;
     const gname = (g) => (g === '' ? '주문 없음' : g === '?' ? '갈래를 안 고른 주문' : whoLabel(g));
     if (M.narrow) {
       return `<div class="mk-scroll" data-scroll="plan"><div class="mk-pad">${top}
         ${groups.map(([g, rs]) => `<h3 class="mk-h">${esc(gname(g))} <span class="a-faint">${rs.length}</span></h3>${rs.map((r) => `<div class="mk-prow">
-          <button class="mk-link a-mono" data-act="order" data-owner="${esc(r.owner)}" data-cat="${esc(r.category)}">${esc(r.category)}</button>
+          <button class="mk-link" data-act="order" data-owner="${esc(r.owner)}" data-cat="${esc(r.category)}">${r.name ? `<b class="mk-name">${esc(r.name)}</b> ` : ''}<span class="a-mono">${esc(r.category)}</span></button>
           <div class="mk-brief ${r.order ? '' : 'is-none'}">${r.order ? esc(r.brief) : '주문 없음'}</div>
           <div class="mk-pchips">${[...r.cells.values()].map(chip).join('')}</div></div>`).join('')}`).join('')}
         ${story.length ? `<h3 class="mk-h">줄거리</h3>${story.map((c) => `<div class="mk-prow"><button class="mk-link a-mono" data-act="scene" data-scene="${esc(c.scene)}">${esc(c.scene)}</button><div class="mk-brief">${esc(c.brief ?? '')}</div><div class="mk-pchips">${chip(c)}</div></div>`).join('')}` : ''}
@@ -72,7 +73,7 @@ export const planView = {
     const ncol = cols.reduce((n, c) => n + c.levels.length, 0) + 1;
     const body = groups.map(([g, rs]) => `<tr class="mk-group"><td colspan="${ncol}">${esc(gname(g))}<span class="a-faint"> ${rs.length}</span></td></tr>` + rs.map((r) => `
       <tr><td class="mk-rh"><label class="mk-rowsel"><input type="checkbox" data-row="${esc(r.key)}" ${sel.has(r.key) ? 'checked' : ''}></label>
-        <button class="mk-link" data-act="order" data-owner="${esc(r.owner)}" data-cat="${esc(r.category)}" title="주문서에서 열기"><span class="a-mono">${esc(r.category)}</span>${owners.size > 1 ? `<span class="a-faint"> ${esc(r.owner)}</span>` : ''}</button>
+        <button class="mk-link" data-act="order" data-owner="${esc(r.owner)}" data-cat="${esc(r.category)}" title="주문서에서 열기">${r.name ? `<b class="mk-name">${esc(r.name)}</b> ` : ''}<span class="a-mono">${esc(r.category)}</span>${owners.size > 1 ? `<span class="a-faint"> ${esc(r.owner)}</span>` : ''}</button>
         <div class="mk-brief ${r.order ? '' : 'is-none'}">${r.order ? esc(r.brief) || '<i>주문에 글이 없음</i>' : '주문 없음'}</div></td>
         ${cols.map((c) => c.levels.map((l) => cellHtml(r.cells.get(`${c.prev}|${l}`))).join('')).join('')}</tr>`).join('')).join('');
     const gateOf = (c) => (c.gate ?? c.prev.map((p) => `prev:${p}`));

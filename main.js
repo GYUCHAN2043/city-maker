@@ -17,7 +17,7 @@ function start(backend, extra = {}) {
   window.cityMaker = store;
   unmount = mountMaker(el, store, { settings, ...extra });
 }
-function logout() { ls.set('maker.token', null); unmount?.(); unmount = null; login(); }
+function logout() { ls.set('maker.token', null); ls.set('maker.xai', null); unmount?.(); unmount = null; login(); }
 
 // 들어가기: 저장소 · 브랜치 · 토큰. 토큰은 그 저장소 하나의 내용(Contents)을 읽고 쓰는 것이면 된다
 function login(msg = '') {

@@ -59,7 +59,7 @@ export const pickView = {
     const left = list.filter((c) => isShown(eff(c), show)).length;
     const note = cell.kind === 'story' ? M.store.sceneOf(cell.scene)?.sc.note : M.store.orderOf(cell.owner, cell.category)?.note;
     const name = cell.kind === 'story' ? cell.scene : cell.category;
-    const opt = (c) => `<option value="${esc(c.key)}" ${c.key === cell.key ? 'selected' : ''}>${esc(`${c.kind === 'story' ? c.scene : c.category} · ${c.prev.join(' + ') || '무관'} · ${c.level}${c.waiting ? ` — 후보 ${c.waiting}` : ''}`)}</option>`;
+    const opt = (c) => `<option value="${esc(c.key)}" ${c.key === cell.key ? 'selected' : ''}>${esc(`${c.kind === 'story' ? c.scene : c.name ? `${c.name} (${c.category})` : c.category} · ${c.prev.join(' + ') || '무관'} · ${c.level}${c.waiting ? ` — 후보 ${c.waiting}` : ''}`)}</option>`;
     const cards = list.map((c) => { const [label, tone] = TAG[eff(c)] ?? [eff(c), '']; return `
       <article class="mk-card is-${esc(eff(c))} ${c.id === M.ui.focusId ? 'is-focus' : ''}" data-act="focus" data-id="${esc(c.id)}">
         <div class="mk-card-state"><span class="a-badge ${tone ? `is-${tone}` : ''}">${label}</span><span class="a-faint">${esc(c.batch ?? '')}</span></div>

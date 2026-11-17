@@ -263,3 +263,8 @@
 .mk-last { grid-column: span 2; }
 .mk.is-narrow .mk-last { grid-column: auto; }
 .mk.is-narrow .mk-run-cards { grid-template-columns: 1fr; }
+
+/* 6절: 이름은 크게 · id 는 작게 · 문제는 접어서 */
+.mk-name { font-weight:600; font-size:13.5px; margin-right:4px }
+.mk-fold summary { cursor:pointer; color:var(--warning); font-size:12px; width:max-content }
+.mk-fold[open] summary { margin-bottom:4px }

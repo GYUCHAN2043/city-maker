@@ -11,20 +11,31 @@
 // 쓰는 곳은 Cards/ 아래뿐이다 (canWritePath). 화면은 내용을 모른다 — 카드의 칸은 받은 그대로 넘긴다.
 
 export const STATUSES = ['live', 'picked', 'draft', 'checked', 'dropped'];
-const CMDS = ['plan', 'cards', 'pick', 'shapes', 'gen', 'bake'];
+const CMDS = ['plan', 'cards', 'pick', 'shapes', 'gen', 'bake', 'lib'];
+// 작업대가 읽는 색인 (넘김-3 4절) — 웹은 Cards/_index/<이름>.json · 런처는 lib.py <이름> --json · 없으면 가짜 응답 Tools/Maker/fixtures/bench/<이름>.json
+export const BENCH = ['info', 'patterns', 'categories', 'sts', 'look', 'prompts'];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // JSON 을 너그럽게: BOM · 줄 머리의 // 풀이를 걷어 냄 (콘텐츠 파일이 그렇게 쓴다)
 export const lenient = (t) => { const s = String(t).replace(/^﻿/, ''); try { return JSON.parse(s); } catch { return JSON.parse(s.replace(/^\s*\/\/.*$/gm, '')); } };
 export const pretty = (o) => JSON.stringify(o, null, 2) + '\n';
 // 쓰기는 이 꼴의 경로뿐 (Cards/ 기준). .cards 는 화면이 직접 고치지 않는다 — pick 으로
-const WRITABLE = [/^[^/_][^/]*(\/[^/]+)*\/orders\.json$/, /^[^/_][^/]*\/_story\/[a-z][a-z0-9_]*\.json$/, /^_inbox\/[a-z0-9-]+\.json$/];
+const WRITABLE = [/^[^/_][^/]*(\/[^/_][^/]*)*\/(orders|patterns|categories)\.json$/, /^[^/_][^/]*\/_story\/[a-z][a-z0-9_]*\.json$/, /^_inbox\/[a-z0-9-]+\.json$/, /^_lib\/(targets|requests)\.json$/];
 export const canWritePath = (rel) => !rel.split('/').some((p) => p === '..' || p === '.' || p === '') && !rel.startsWith('_index/') && WRITABLE.some((r) => r.test(rel));
+const stamp = () => new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').replace('.', '-').replace('Z', '') + '-' + Math.random().toString(36).slice(2, 6);
+// 작업대의 읽기를 하나로: 진짜(색인 · 명령)를 먼저, 안 되면 가짜 응답. 어느 쪽에서 왔는지 같이 돌려준다
+async function realOrFake(real, fake) { try { const d = await real(); if (d != null) return { data: d, fake: false }; } catch { /* 진짜가 아직 없음 */ } return { data: await fake(), fake: true }; }
 const storyOf = (path, d) => { const m = path.match(/^([^/]+)\/_story\/([^/]+)\.json$/); return { pack: m[1], data: { ...d, id: d.id ?? m[2], scenes: d.scenes ?? [] } }; };
 
 // ───────────────────────── 가짜 응답 ─────────────────────────
 // load(name) → 가짜 응답 파일의 내용. 고르기는 받기만 한다(바꿀 카드 파일이 없다).
 export function fixturesBackend(load) {
+  const lib = {};
   return {
+    bench: (name) => load(`bench/${name}`).then((data) => ({ data, fake: true })),
+    benchSt: (id) => load(`bench/st/${id}`).then((data) => ({ data, fake: true }), () => ({ data: null, fake: true })),
+    async readLib(rel) { return lib[rel] ?? (rel === '_lib/targets.json' ? load('bench/targets').catch(() => null) : null); },
+    async saveLib(rel, obj) { lib[rel] = obj; },
+    async queue() { return null; },
     kind: 'fixtures', label: '가짜 응답', caps: { fill: false, bake: false, key: null, deferred: true },
     async init() {},
     shapes: () => load('shapes'), plan: () => load('plan'), cards: () => load('cards'),
@@ -87,6 +98,13 @@ export function launcherBackend(env = {}) {
       call.ok = true; return out;
     } catch (e) { call.ok = false; call.error = e.message; throw e; }
   }
+  // lib.py 의 JSON (총괄이 명령을 만들면) — 안 되면 null → 가짜 응답
+  async function libJson(args) {
+    if (!B.real.lib) return null;
+    const r = await job('lib', args);
+    const i = [r.text.indexOf('{'), r.text.indexOf('[')].filter((x) => x >= 0);
+    return r.code === 0 && i.length ? JSON.parse(r.text.slice(Math.min(...i))) : null;
+  }
   Object.assign(B, {
     async init() {
       const info = await (await get('/host/info')).json();
@@ -110,6 +128,12 @@ export function launcherBackend(env = {}) {
     },
     saveOrders: (owner, obj) => write(`${owner}/orders.json`, pretty(obj)),
     saveStory: (story) => write(`${story.pack}/_story/${story.data.id}.json`, pretty(story.data)),
+    // 작업대: lib.py <이름> --json (총괄이 만든다) → 없으면 가짜 응답
+    bench: (name) => realOrFake(() => libJson([name, '--json']), () => read('city', `Tools/Maker/fixtures/bench/${name}.json`).then(lenient)),
+    benchSt: (id) => realOrFake(() => libJson(['st', id, '--json']), () => read('city', `Tools/Maker/fixtures/bench/st/${id}.json`).then(lenient, () => null)),
+    readLib: (rel) => read('cards', rel).then(lenient, () => null),
+    saveLib: (rel, obj) => write(rel, pretty(obj)),
+    queue: (obj) => write(`_inbox/make-${stamp()}.json`, pretty(obj)),
     // 카테고리 나무 · 패턴 (Game/Content — 읽기만)
     async tree() {
       const files = await list('city', 'Game/Content', '_category.json', 12);
@@ -229,6 +253,12 @@ export function githubBackend(cfg) {
       return out;
     },
     saveOrders: (owner, obj) => put(`${owner}/orders.json`, pretty(obj), `maker: 주문 ${owner}`),
+    // 작업대: 색인 Cards/_index/<이름>.json → 없으면 저장소 안의 가짜 응답 (페이지에는 내용이 없다 — 전부 토큰으로)
+    bench: (name) => realOrFake(() => raw(`Cards/_index/${name}.json`).then(lenient), () => raw(`Tools/Maker/fixtures/bench/${name}.json`).then(lenient)),
+    benchSt: (id) => realOrFake(() => raw(`Cards/_index/st/${id}.json`).then(lenient), () => raw(`Tools/Maker/fixtures/bench/st/${id}.json`).then(lenient, () => null)),
+    async readLib(rel) { const t = await file(`Cards/${rel}`); return t == null ? null : lenient(t); },
+    saveLib: (rel, obj) => put(rel, pretty(obj), `maker: ${rel}`),
+    queue: (obj, label = '만들기') => put(`_inbox/make-${stamp()}.json`, pretty(obj), `maker: ${label}`),
     saveStory: (story) => put(`${story.pack}/_story/${story.data.id}.json`, pretty(story.data), `maker: 줄거리 ${story.pack}/${story.data.id}`),
     // 카테고리 나무 · 패턴 · 사전 (Game/Content — 읽기만): 저장소의 파일 목록 한 번 + 작은 파일 몇 개. 런처 길과 같은 꼴로 — 없는 이름을 밖에서도 빨갛게
     async tree() {

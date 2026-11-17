@@ -3,6 +3,7 @@
 //   화면 다섯: 가 일감 표 · 나 고르기 · 다 줄거리 표 · 라 주문서 · 마 돌리기.
 //   이 폴더는 스스로 선다 — 런처의 패널(index.js)에서도, 따로 연 페이지(index.html — 밖 · 폰)에서도 같은 화면이 돈다. 데이터 길은 backends.js.
 import { esc, confirmBox } from './ui.js';
+import { benchView } from './view-bench.js';
 import { planView } from './view-plan.js';
 import { pickView } from './view-pick.js';
 import { storyView } from './view-story.js';
@@ -10,6 +11,7 @@ import { ordersView } from './view-orders.js';
 import { runView } from './view-run.js';
 
 const VIEWS = [
+  { id: 'bench', title: '작업대', view: benchView },
   { id: 'plan', title: '일감 표', view: planView },
   { id: 'pick', title: '고르기', view: pickView },
   { id: 'story', title: '줄거리 표', view: storyView },
@@ -26,8 +28,8 @@ export function mountMaker(el, store, env) {
       el.innerHTML = '<div class="mk" tabindex="-1"><nav class="mk-nav"></nav><div class="mk-err" hidden></div><div class="mk-body"></div></div>';
       const root = el.firstChild, nav = root.children[0], err = root.children[1], body = root.children[2];
       // M = 화면들이 같이 쓰는 것: 저장소 · 지금 보는 화면 · 화면마다의 고른 것(ui)
-      const M = { store, S: store.S, env, view: env.settings.get('view', 'plan'), narrow: el.clientWidth > 0 && el.clientWidth < NARROW, ui: { rows: new Set(), touched: new Set(), side: true },
-        go(view, patch) { Object.assign(M.ui, patch ?? {}); M.view = view; env.settings.set('view', view); draw(); if (!typing(document.activeElement)) root.focus({ preventScroll: true }); },
+      const M = { store, S: store.S, env, view: env.settings.get('view3', 'bench'), narrow: el.clientWidth > 0 && el.clientWidth < NARROW, ui: { rows: new Set(), touched: new Set(), side: true },
+        go(view, patch) { Object.assign(M.ui, patch ?? {}); M.view = view; env.settings.set('view3', view); draw(); if (!typing(document.activeElement)) root.focus({ preventScroll: true }); },
         redraw: () => draw(), confirm: (opts) => confirmBox(root, opts) };
       const cur = () => (VIEWS.find((v) => v.id === M.view) ?? VIEWS[0]).view;
 
