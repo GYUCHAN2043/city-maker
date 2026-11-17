@@ -11,8 +11,9 @@
 // 쓰는 곳은 Cards/ 아래뿐이다 (canWritePath). 화면은 내용을 모른다 — 카드의 칸은 받은 그대로 넘긴다.
 
 export const STATUSES = ['live', 'picked', 'draft', 'checked', 'dropped'];
-const CMDS = ['plan', 'cards', 'pick', 'shapes', 'gen', 'bake', 'lib'];
-// 작업대가 읽는 색인 (넘김-3 4절) — 웹은 Cards/_index/<이름>.json · 런처는 lib.py <이름> --json · 없으면 가짜 응답 Tools/Maker/fixtures/bench/<이름>.json
+const CMDS = ['plan', 'cards', 'pick', 'shapes', 'gen', 'bake', 'lib', 'prompts'];
+// 작업대가 읽는 색인 (넘김-3 4-2절) — 웹은 Cards/_index/<이름>.json · 런처는 lib.py <이름> --json (요청문은 prompts.py --json) · 없으면 가짜 응답 Tools/Maker/fixtures/bench/<이름>.json
+// 이 밖의 이름(targets — 견본의 저장된 대상)은 가짜 응답에서만
 export const BENCH = ['info', 'patterns', 'categories', 'sts', 'look', 'prompts'];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // JSON 을 너그럽게: BOM · 줄 머리의 // 풀이를 걷어 냄 (콘텐츠 파일이 그렇게 쓴다)
@@ -98,10 +99,10 @@ export function launcherBackend(env = {}) {
       call.ok = true; return out;
     } catch (e) { call.ok = false; call.error = e.message; throw e; }
   }
-  // lib.py 의 JSON (총괄이 명령을 만들면) — 안 되면 null → 가짜 응답
-  async function libJson(args) {
-    if (!B.real.lib) return null;
-    const r = await job('lib', args);
+  // lib.py · prompts.py 의 JSON — 안 되면 null → 가짜 응답
+  async function libJson(args, name = 'lib') {
+    if (!B.real[name]) return null;
+    const r = await job(name, args);
     const i = [r.text.indexOf('{'), r.text.indexOf('[')].filter((x) => x >= 0);
     return r.code === 0 && i.length ? JSON.parse(r.text.slice(Math.min(...i))) : null;
   }
@@ -128,8 +129,8 @@ export function launcherBackend(env = {}) {
     },
     saveOrders: (owner, obj) => write(`${owner}/orders.json`, pretty(obj)),
     saveStory: (story) => write(`${story.pack}/_story/${story.data.id}.json`, pretty(story.data)),
-    // 작업대: lib.py <이름> --json (총괄이 만든다) → 없으면 가짜 응답
-    bench: (name) => realOrFake(() => libJson([name, '--json']), () => read('city', `Tools/Maker/fixtures/bench/${name}.json`).then(lenient)),
+    // 작업대: lib.py <이름> --json · 요청문은 prompts.py --json (총괄이 만든다) → 없으면 가짜 응답
+    bench: (name) => realOrFake(() => (!BENCH.includes(name) ? null : name === 'prompts' ? libJson(['--json'], 'prompts') : libJson([name, '--json'])), () => read('city', `Tools/Maker/fixtures/bench/${name}.json`).then(lenient)),
     benchSt: (id) => realOrFake(() => libJson(['st', id, '--json']), () => read('city', `Tools/Maker/fixtures/bench/st/${id}.json`).then(lenient, () => null)),
     readLib: (rel) => read('cards', rel).then(lenient, () => null),
     saveLib: (rel, obj) => write(rel, pretty(obj)),
@@ -254,7 +255,7 @@ export function githubBackend(cfg) {
     },
     saveOrders: (owner, obj) => put(`${owner}/orders.json`, pretty(obj), `maker: 주문 ${owner}`),
     // 작업대: 색인 Cards/_index/<이름>.json → 없으면 저장소 안의 가짜 응답 (페이지에는 내용이 없다 — 전부 토큰으로)
-    bench: (name) => realOrFake(() => raw(`Cards/_index/${name}.json`).then(lenient), () => raw(`Tools/Maker/fixtures/bench/${name}.json`).then(lenient)),
+    bench: (name) => realOrFake(() => (BENCH.includes(name) ? raw(`Cards/_index/${name}.json`).then(lenient) : null), () => raw(`Tools/Maker/fixtures/bench/${name}.json`).then(lenient)),
     benchSt: (id) => realOrFake(() => raw(`Cards/_index/st/${id}.json`).then(lenient), () => raw(`Tools/Maker/fixtures/bench/st/${id}.json`).then(lenient, () => null)),
     async readLib(rel) { const t = await file(`Cards/${rel}`); return t == null ? null : lenient(t); },
     saveLib: (rel, obj) => put(rel, pretty(obj), `maker: ${rel}`),

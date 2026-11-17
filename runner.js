@@ -12,7 +12,7 @@ export function createRunner(look = {}) {
 
   const beat = (i) => st.beats[i];
   const goto = (id) => st.beats.findIndex((b) => b.id === id);
-  const miniOf = (a) => { const A = ACTS[a?.intent] ?? {}; return A.input === 'hold' ? 'hold' : (A.mash || A.input === 'mash') ? 'mash' : null; };
+  const miniOf = (a) => { const A = ACTS[a?.intent] ?? ACTS[look.aliases?.[a?.intent]?.verb] ?? {}; return A.input === 'hold' ? 'hold' : (A.mash || A.input === 'mash') ? 'mash' : null; };
 
   function finish(end) { X.done = end; X.wait = null; X.result = (st.result ?? {})[end] ?? null; }
   // 비트 · 선택이 끝난 뒤 어디로

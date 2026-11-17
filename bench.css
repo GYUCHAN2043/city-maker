@@ -152,6 +152,18 @@
 .mkb-dots { display:none }
 /* 좁은 데스크톱 */
 @media (max-width:1280px) { .mkb .cols { grid-template-columns:repeat(2,minmax(0,1fr)) } .mkb .col.info { grid-column:1 / -1; max-height:260px; min-height:0 } .mkb .col.det { grid-column:1 / -1 } }
+/* maker-3-2: 진짜 색인의 칸 — 낱말 · 확인 전 · 아직 엔진에 없음 · 폴더 없음 · 상태 필터 · 여럿 고르기 · 받은 답 */
+.mkb .wd, .mkb .chk, .mkb .eng { font-size:10.5px; font-weight:500; color:var(--mute); border:1px solid var(--line); border-radius:4px; padding:0 4px; white-space:nowrap }
+.mkb .chk { border-style:dashed }
+.mkb .eng { color:var(--wait); border-color:var(--wait) }
+.mkb .item.missing { border-color:var(--bad) } .mkb .item.missing .t { color:var(--bad) }
+.mkb .s.plan { font-style:normal }
+.mkb .stf { display:flex; flex-wrap:wrap; margin:0 0 6px }
+.mkb .selbar { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 6px; padding:6px; border-radius:6px; background:var(--teal-bg) }
+.mkb .strow { display:flex; align-items:flex-start; gap:4px } .mkb .strow > input { margin:10px 0 0 2px; flex:0 0 auto } .mkb .strow .nosel { flex:0 0 17px }
+.mkb .rawans { font-size:12px; margin-top:6px } .mkb .rawans pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:220px; overflow:auto; background:var(--soft); padding:6px 8px; border-radius:6px; font-family:var(--mono); font-size:11.5px }
+.mkb.is-narrow .strow > input { width:20px; height:20px; margin-top:12px }
+
 /* 폰 (app.js 의 .is-narrow · 넘김-3 5절 4): 칸이 가로로 넘겨 보는 꼴 — 대상 → 패턴 → 카테고리 → ST → 상세를 한 칸씩 */
 .mkb.is-narrow .mkb-wrap { padding:10px 10px 64px }
 .mkb.is-narrow .arrow { display:none }

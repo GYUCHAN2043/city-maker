@@ -2,7 +2,7 @@
 // 화면은 내용을 모른다: 칸의 글은 받은 그대로 보여 준다 (연출 꼬리표 {이름:글} 의 껍데기만 벗긴다 — bake.py 의 strip_tags 와 같은 뜻).
 import { esc } from './ui.js';
 
-const META = new Set(['title', 'to', 'fun', 'need', 'risk', 'small']);   // 말풍선이 아닌 칸 (값 · 조건 — 아래에 작은 꼬리표로)
+const META = new Set(['title', 'to', 'fun', 'need', 'risk', 'small', 'brief']);   // 말풍선이 아닌 칸 (값 · 조건 · brief 한 줄 — 아래에 작은 꼬리표로)
 const plain = (s) => String(s ?? '').replace(/\{[a-z0-9_]+:([^}]*)\}/g, '$1').replace(/\{\/?[a-z0-9_]*\}/g, '');
 const stem = (k) => k.replace(/_?\d+$/, '');
 const isChoice = (k) => /^(choice|opt|option|pick|yes|no|accept|refuse)/.test(k);
