@@ -21,7 +21,7 @@ let B = null;                          // 판 하나 (모든 화면이 같이 �
 export const benchView = {
   html: () => '<div class="mkb-host"></div>',
   after(M, body) {
-    if (!B) B = createBench(M);
+    if (!B || B.backend !== M.store.backend) B = createBench(M);
     B.M = M;
     body.querySelector('.mkb-host').replaceWith(B.el);
     B.setNarrow(M.narrow);
@@ -296,7 +296,7 @@ function createBench(M) {
   }
   const sipName = (e) => ({ 'drink.sip': '한 모금', 'drink.half': '반 잔', 'drink.glass': '한 잔', 'drink.bottoms_up': '원샷' }[e] ?? e);
   // 대상의 조건으로 조건 갈림을 아는 만큼 정한다 — 낱말이 대상의 정보 id 와 같으면 참 (모르면 사용자에게)
-  const condFromTarget = (text) => { const all = [...S.T.f.c, ...S.T.t.c].map((c) => c.id); const w = String(text).match(/[a-z_]+/g) ?? []; return w.some((x) => all.includes(x)) ? true : undefined; };
+  const condFromTarget = (text) => { const all = [...S.T.f.c, ...S.T.t.c].map((c) => c.id); const t = String(text), w = t.match(/[a-z_]+/g) ?? []; if (!w.some((x) => all.includes(x))) return undefined; return /^\s*\[?\s*"?!/.test(t) ? false : true; };
 
   async function oneOf(id) {
     if (S.one[id] !== undefined) return S.one[id];
@@ -322,6 +322,7 @@ function createBench(M) {
       else if (s.fields) html += `<div class="cardv">${cardHtml({ id: s.id, fields: s.fields, order: Object.keys(s.fields), shape: s.shape }, { compact: true })}</div>`;
       else html += '<div class="empty">이 ST의 본문이 색인에 없습니다.</div>';
       if (one?.beats?.length) html += S.sim?.id === s.id ? simHtml() : '<div class="row"><button class="btn pri" data-sim="start">▶ 시뮬레이션 — 처음부터 돌려 보기</button><button class="btn" disabled title="D-055 의 조사 뒤">직전 상태로 들어가기</button></div>';
+      if (s.warn?.length) html += `<div class="s warn">가벼운 검사: ${s.warn.map(esc).join(' · ')}</div>`;
       if (s.f.length || s.t.length) html += `<div class="meta">쓰는 조건: ${[...s.f, ...s.t].map((c) => `<span class="chip">${esc(condText([c]))}</span>`).join('')}</div>`;
       const rd = S.redo[s.id];
       if (rd?.fields) html += `<div class="box"><b>새 판 — 이전 판과 나란히</b><div class="vs"><div><div class="s">이전 판</div>${one?.beats ? dialogHtml(one) : s.fields ? cardHtml({ id: s.id, fields: s.fields, order: Object.keys(s.fields), shape: s.shape ?? shapeOf(catOf(s.cat) ?? { id: s.cat }) }) : ''}</div><div><div class="s">새 판</div>${cardHtml({ id: s.id, fields: rd.fields, order: Object.keys(rd.fields), shape: s.shape ?? shapeOf(catOf(s.cat) ?? { id: s.cat }) })}</div></div>
@@ -414,6 +415,15 @@ function createBench(M) {
   const tgtText = () => targetText(S.T, (id) => info(id).name, (r) => ROLES[r] ?? r);
   const curCat = () => catOf(S.cat) ?? { id: S.cat };
   const shapeOf = (c) => c.shape || S.lib.prompts?.categories?.[c.id]?.shape || store.orderOf?.(S.owner, c.id)?.shape || '';
+  // 화면의 가벼운 검사 (넘김-3 4절): 틀의 칸 이름 · 한 줄 40자 — 걸리면 표시만 하고 저장은 그대로 (저장소의 검사가 정한다)
+  function lightCheck(shape, fields) {
+    const out = [], known = S.lib.shapes?.shapes?.[shape]?.fields ?? store.S.shapes?.[shape]?.fields;
+    for (const [k, v] of Object.entries(fields ?? {})) {
+      if (known?.length && !known.includes(k)) out.push(`틀 ${shape} 에 없는 칸: ${k}`);
+      if (typeof v === 'string' && k !== 'title' && v.length > 40) out.push(`${k} 한 줄이 ${v.length}자 (40자까지)`);
+    }
+    return out;
+  }
   async function doBriefs() {
     const n = Math.max(1, Math.min(10, +S.cnt || 5)), c = curCat();
     S.busy = 'briefs'; S.msg = ''; drawDetail();
@@ -427,9 +437,9 @@ function createBench(M) {
   async function doNovels(keepOnly) {
     const c = curCat(), list = S.briefs.filter((b) => !b.off), level = S.level ?? 'general', batch = `w${Date.now().toString(36)}`;
     if (keepOnly) {
-      const cards = list.map((b) => ({ category: c.id, shape: shapeOf(c), level, prev: [], status: 'brief', fields: { brief: b.t }, model: aiModel.get(), batch }));
+      const cards = list.map((b, k) => ({ ref: `${batch}_${k}`, category: c.id, shape: shapeOf(c), level, prev: [], target: tgtObj(), status: 'brief', fields: { brief: b.t }, model: aiModel.get(), batch }));
       await ai.save(cards);
-      for (const b of list) S.made.unshift({ id: `${batch}_${S.made.length}`, title: b.t, cat: c.id, status: 'brief', level, src: 'card', f: S.T.f.c, t: S.T.t.c, brief: b.t });
+      cards.forEach((x, k) => S.made.unshift({ id: x.ref, ref: x.ref, title: list[k].t, cat: c.id, status: 'brief', level, src: 'card', f: S.T.f.c, t: S.T.t.c, brief: list[k].t }));
       S.briefs = null; S.msg = `${list.length}개를 brief로 남겼습니다 (대기열 → 카드 파일).`; return draw();
     }
     S.busy = 'novels'; drawDetail();
@@ -438,12 +448,13 @@ function createBench(M) {
       for (const b of list) {
         const r = await ai.novel({ category: c.id, shape: shapeOf(c), target: tgtText(), brief: b.t, level });
         if (r.queued) { // 대기열 길: brief 로 저장하고 소설은 다음 걸음 (novels 는 카드 id 로)
-          await ai.save(list.map((x) => ({ category: c.id, shape: shapeOf(c), level, prev: [], status: 'brief', fields: { brief: x.t }, batch })));
-          S.msg = `그록을 바로 부를 수 없어 brief ${list.length}개를 대기열에 넣었습니다 — 들어오면 하나씩 "소설로 만들기".`; S.briefs = null; break;
+          const rest = list.slice(list.indexOf(b));
+          await ai.save(rest.map((x, k) => ({ ref: `${batch}_b${k}`, category: c.id, shape: shapeOf(c), level, prev: [], target: tgtObj(), status: 'brief', fields: { brief: x.t }, model: aiModel.get(), batch })));
+          S.msg = `그록을 바로 부를 수 없어 남은 brief ${rest.length}개를 대기열에 넣었습니다 — 들어오면 하나씩 "소설로 만들기".`; S.briefs = null; break;
         }
-        const id = `${batch}_${done.length}`;
-        done.push({ category: c.id, shape: shapeOf(c), level, prev: [], status: 'draft', fields: r.fields, model: r.model, batch });
-        S.made.unshift({ id, title: r.fields.title ?? b.t, cat: c.id, status: 'new', level, src: 'card', f: S.T.f.c, t: S.T.t.c, fields: r.fields, shape: shapeOf(c) });
+        const id = `${batch}_${done.length}`, warn = lightCheck(shapeOf(c), r.fields);
+        done.push({ ref: id, category: c.id, shape: shapeOf(c), level, prev: [], target: tgtObj(), status: 'draft', fields: r.fields, model: r.model, batch });
+        S.made.unshift({ id, ref: id, title: r.fields.title ?? b.t, cat: c.id, status: 'new', level, src: 'card', f: S.T.f.c, t: S.T.t.c, fields: r.fields, shape: shapeOf(c), warn });
         drawSt();
       }
       if (done.length) { await ai.save(done); S.briefs = null; S.msg = `소설 ${done.length}개 — ST 칸에서 하나씩 보고 적용합니다 (저장은 대기열 → 카드 파일).`; }
@@ -465,7 +476,7 @@ function createBench(M) {
   }
   async function apply(to) {
     const s = sts().find((x) => x.id === S.st);
-    if (s.status === 'new') { s.status = to === 'picked' ? 'picked' : 'dropped'; S.msg = to === 'picked' ? '적용했습니다 — 카드가 저장소에 적히면 굽기까지 자동으로.' : '버렸습니다. 다음 생성 때 피할 것으로 쓰입니다.'; return draw(); }
+    if (s.ref) { await backend.queue({ picks: [{ ref: s.ref, to }] }, `${to} ${s.ref}`); s.status = to === 'picked' ? 'picked' : 'dropped'; S.msg = to === 'picked' ? '적용했습니다 — 카드가 저장소에 적히면 굽기까지 자동으로.' : '버렸습니다. 다음 생성 때 피할 것으로 쓰입니다.'; return draw(); }
     store.setStatus([[s.id, to]]);
     S.msg = to === 'picked' ? '적용했습니다 — 굽기를 거쳐 게임에 들어갑니다.' : '버렸습니다. 다음 생성 때 피할 것으로 쓰입니다.';
     if (to === 'dropped') S.st = null;
@@ -497,7 +508,7 @@ function createBench(M) {
     if ((d.sim === 'mashY' || d.sim === 'mashN') && S.sim) S.sim.state = S.sim.r.answer('mash', d.sim === 'mashY');
     if ((d.sim === 'condY' || d.sim === 'condN') && S.sim) S.sim.state = S.sim.r.answer('cond', d.sim === 'condY');
     switch (d.x) {
-      case 'match': { const r = ai.match(el.querySelector('[data-q="nl"]').value, S.lib.info, ROLES); for (const [side, role] of Object.entries(r.roles)) S.T[side].role = role; S.sugg = r; break; }
+      case 'match': { const r = ai.match(el.querySelector('[data-q="nl"]').value, S.lib.info, ROLES); for (const [side, role] of Object.entries(r.roles)) { S.T[side].role = role; S.T[side].c = S.T[side].c.filter((c) => roleOk(info(c.id), role)); } S.sugg = r; break; }
       case 'clear': S.T.f.c = []; S.T.t.c = []; S.sugg = null; S.msg = ''; break;
       case 'request': await request(S.sugg.missing); break;
       case 'saveTarget': await saveTarget(); break;
@@ -518,13 +529,13 @@ function createBench(M) {
       case 'briefs': return doBriefs();
       case 'novels': return doNovels(false);
       case 'keepBriefs': return doNovels(true);
-      case 'toNovel': { await ai.novelsQueued([S.st]); S.msg = '소설로 만들기를 대기열에 넣었습니다.'; break; }
+      case 'toNovel': { const s = sts().find((x) => x.id === S.st); if (s?.ref) await backend.queue({ novels: [{ refs: [s.ref] }] }, `소설 ${s.ref}`); else await ai.novelsQueued([S.st]); S.msg = '소설로 만들기를 대기열에 넣었습니다.'; break; }
       case 'redo': return doRedo();
-      case 'takeRedo': { const s = sts().find((x) => x.id === S.st), rd = S.redo[s.id]; await backend.queue({ redo: [{ id: s.id, note: rd.note, fields: rd.fields }] }, `새 판 ${s.id}`); S.redo[s.id] = null; S.msg = '새 판을 저장했습니다 — 이전 판은 versions 에 남는다.'; break; }
+      case 'takeRedo': { const s = sts().find((x) => x.id === S.st), rd = S.redo[s.id]; await backend.queue({ redo: [{ ...(s.ref ? { ref: s.ref } : { id: s.id }), note: rd.note, fields: rd.fields }] }, `새 판 ${s.id}`); if (s.fields) s.fields = rd.fields; S.redo[s.id] = null; S.msg = '새 판을 저장했습니다 — 이전 판은 versions 에 남는다.'; break; }
       case 'dropRedo': S.redo[S.st] = null; break;
       case 'apply': return apply('picked');
       case 'drop': return apply('dropped');
-      case 'keySet': { const v = el.querySelector('[data-q="key"]').value; if (v.trim()) { aiKey.set(v); S.models = await ai.models(); } break; }
+      case 'keySet': { const v = el.querySelector('[data-q="key"]').value; if (v.trim()) { aiKey.set(v); await pickModel(); } break; }
       case 'keyClear': aiKey.clear(); S.models = []; break;
       default: break;
     }
@@ -540,6 +551,8 @@ function createBench(M) {
     const t = e.target, q = t.dataset.q;
     if (t.dataset.bi != null) { S.briefs[+t.dataset.bi].t = t.value; return; }
     if (q === 'topic') S.topic = t.value; if (q === 'cnt') S.cnt = t.value;
+    if (q === 'fb' && S.st) S.redo[S.st] = { ...(S.redo[S.st] ?? {}), note: t.value };
+    if (q === 'newCatId' && S.newCat) S.newCat.id = t.value;
     if (q in S.q) { S.q[q] = t.value.trim(); ({ info: drawInfo, pat: drawPat, cat: drawCat, st: drawSt })[q](); }
   });
   el.addEventListener('keydown', (e) => {
@@ -550,9 +563,10 @@ function createBench(M) {
   // 폰: 가로로 밀면 지금 칸이 바뀐다
   el.querySelector('.cols').addEventListener('scroll', (e) => { if (!S.narrow) return; const w = e.target.clientWidth; const i = Math.round(e.target.scrollLeft / w); if (i !== S.col) { S.col = i; drawDots(); } }, { passive: true });
 
-  load().then(async () => { if (aiKey.has()) { S.models = await ai.models(); drawTop(); } });
+  const pickModel = async () => { S.models = await ai.models(); if (S.models.length && !S.models.includes(aiModel.get())) aiModel.set(S.models[0]); drawTop(); };
+  load().then(() => (aiKey.has() ? pickModel() : null));
   return {
-    el, S, ai, reload: load,
+    el, S, ai, backend, reload: load,
     setNarrow(n) { if (S.narrow === n) return; S.narrow = n; el.classList.toggle('is-narrow', n); drawDots(); },
     refreshTop: () => { if (S.lib) drawTop(); },
   };

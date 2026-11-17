@@ -78,7 +78,7 @@ export function mountMaker(el, store, env) {
       for (const type of ['pointerup', 'pointercancel', 'dragend']) addEventListener(type, release, true);
       nav.addEventListener('click', (e) => {
         const t = e.target.closest('[data-view]'); if (t) return M.go(t.dataset.view);
-        if (e.target.closest('[data-reload]')) store.load();
+        if (e.target.closest('[data-reload]')) { store.load(); if (M.view === 'bench') import('./view-bench.js').then((m) => m.benchFor()?.reload()); }
         if (e.target.closest('[data-logout]')) env.logout();
       });
       body.addEventListener('click', (e) => { const t = e.target.closest('[data-act]'); if (t && !t.disabled) cur().act?.(M, t.dataset.act, t, e); });

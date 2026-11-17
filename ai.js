@@ -66,7 +66,7 @@ export function createAi({ backend, getPrompts, onCost, onNote, fetchImpl }) {
         if (!r.fallback) return { items: (r.out.briefs ?? []).map((b) => (typeof b === 'string' ? b : b.brief ?? b.text ?? '')).filter(Boolean).slice(0, n), usd: r.usd, model: r.model };
         fall(r.why);
       }
-      await backend.queue({ briefs: [{ owner, category, target: targetObj, topic, n }] }, `brief ${category} ${n}`);
+      await backend.queue({ briefs: [{ owner, category, target: targetObj, topic, n, level }] }, `brief ${category} ${n}`);
       return { queued: true };
     },
     // brief 하나 → 소설(틀의 칸) { fields, usd } · 대기열이면 ids 로
